@@ -1,0 +1,47 @@
+services:
+ db:
+   image: postgres:16
+   environment:
+     POSTGRES_USER: receptionist
+     POSTGRES_PASSWORD: receptionist
+     POSTGRES_DB: receptionist
+   ports:
+     - "5432:5432"
+   volumes:
+     - pgdata:/var/lib/postgresql/data
+   healthcheck:
+     test: ["CMD-SHELL", "pg_isready -U receptionist -d receptionist"]
+     interval: 3s
+     timeout: 3s
+     retries: 20
+
+ backend:
+   build: ./backend
+   depends_on:
+     db:
+       condition: service_healthy
+   environment:
+     DATABASE_URL: postgresql+psycopg://receptionist:receptionist@db:5432/receptionist
+     JWT_SECRET: change-me-in-prod
+     PUBLIC_BASE_URL: http://localhost:8000
+   ports:
+     - "8000:8000"
+   volumes:
+     - ./backend/app:/app/app
+
+ frontend:
+   build: ./frontend
+   depends_on:
+     - backend
+   environment:
+     VITE_BACKEND_URL: http://backend:8000
+   ports:
+     - "5173:5173"
+   volumes:
+     - ./frontend/src:/app/src
+     - ./frontend/index.html:/app/index.html
+     - ./frontend/vite.config.ts:/app/vite.config.ts
+
+volumes:
+ pgdata:
+
